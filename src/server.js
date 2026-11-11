@@ -1,12 +1,16 @@
 
-import dotenv from "dotenv";
-
-dotenv.config();
-
+import "dotenv/config";
 import app from "./app.js";
+import connectDB from "./config/database.js";
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-    console.log(`Servidor activo en el puerto ${PORT}`);
-});
+const startServer = async () => {
+    await connectDB();
+
+    app.listen(PORT, () => {
+        console.log(`Servidor activo en el puerto ${PORT}`);
+    });
+};
+
+startServer();
