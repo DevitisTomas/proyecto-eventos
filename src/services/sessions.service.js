@@ -1,5 +1,7 @@
+
 import usersRepository from "../repositories/users.repository.js";
 import hashPassword from "../utils/hash.js";
+import bcrypt from "bcrypt";
 
 const registerUser = async (userData) => {
     const { first_name, last_name, email, password } = userData;
@@ -41,6 +43,29 @@ const registerUser = async (userData) => {
     return newUser;
 };
 
+const loginUser = async (email, password) => {
+    if (!email || !password) {
+        throw new Error("Credenciales inválidas");
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await usersRepository.findByEmail(normalizedEmail);
+
+    if (!user) {
+        throw new Error("Credenciales inválidas");
+    }
+
+    const passwordIsValid = await bcrypt.compare(password, user.password);
+
+    if (!passwordIsValid) {
+        throw new Error("Credenciales inválidas");
+    }
+
+    return user;
+};
+
 export default {
-    registerUser
+    registerUser,
+    loginUser
 };

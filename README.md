@@ -1,16 +1,21 @@
-# Plataforma de Eventos e Inscripciones
+# Proyecto Eventos
 
-API REST desarrollada con Node.js, Express y MongoDB para una plataforma de gestión de eventos e inscripciones.
+API REST desarrollada con Node.js, Express y MongoDB para la gestión de eventos y usuarios.
+
+Este proyecto forma parte de las entregas del curso Backend II de Coderhouse.
 
 ## Tecnologías utilizadas
 
 - Node.js
 - Express
-- JavaScript (ES Modules)
 - MongoDB Atlas
 - Mongoose
+- JavaScript (ES Modules)
 - dotenv
 - bcrypt
+- jsonwebtoken
+- cookie-parser
+- Nodemon
 
 ## Instalación
 
@@ -20,45 +25,34 @@ Clonar el repositorio:
 git clone https://github.com/DevitisTomas/proyecto-eventos.git
 ```
 
-Ingresar a la carpeta del proyecto:
+Ingresar a la carpeta:
 
 ```bash
 cd proyecto-eventos
 ```
 
-Instalar las dependencias:
+Instalar dependencias:
 
 ```bash
 npm install
 ```
 
-## Configuración del entorno
+Crear un archivo `.env` en la raíz del proyecto tomando como referencia `.env.example`.
 
-Crear un archivo `.env` en la raíz del proyecto tomando como referencia el archivo `.env.example`.
-
-Configurar las siguientes variables con los datos correspondientes:
+Configurar las siguientes variables:
 
 ```env
 PORT=3000
 NODE_ENV=development
 MONGO_URL=
 JWT_SECRET=
+JWT_EXPIRES_IN=1h
 ```
 
-**Importante:** No compartir ni subir el archivo `.env` al repositorio, ya que contiene información privada de conexión y configuración.
-
-## Ejecución
-
-Para iniciar el servidor en modo desarrollo:
+Iniciar el servidor:
 
 ```bash
 npm run dev
-```
-
-Para iniciar el servidor:
-
-```bash
-npm start
 ```
 
 El servidor estará disponible en `http://localhost:3000`.
@@ -66,81 +60,134 @@ El servidor estará disponible en `http://localhost:3000`.
 ## Estructura del proyecto
 
 ```text
-proyecto-eventos/
-├── src/
-│   ├── config/
-│   │   └── database.js
-│   ├── controllers/
-│   │   └── sessions.controller.js
-│   ├── dao/
-│   │   └── users.dao.js
-│   ├── middlewares/
-│   ├── models/
-│   │   └── User.js
-│   ├── repositories/
-│   │   └── users.repository.js
-│   ├── routes/
-│   │   └── sessions.router.js
-│   ├── services/
-│   │   └── sessions.service.js
-│   ├── utils/
-│   │   └── hash.js
-│   ├── app.js
-│   └── server.js
-├── .env.example
-├── .gitignore
-├── package.json
-├── package-lock.json
-└── README.md
+src/
+├── config/
+│   └── database.js
+├── controllers/
+│   └── sessions.controller.js
+├── dao/
+│   └── users.dao.js
+├── middlewares/
+│   └── auth.middleware.js
+├── models/
+│   └── User.js
+├── repositories/
+│   └── users.repository.js
+├── routes/
+│   ├── events.router.js
+│   └── sessions.router.js
+├── services/
+│   └── sessions.service.js
+├── utils/
+│   ├── hash.js
+│   └── jwt.js
+├── app.js
+└── server.js
 ```
 
-## Rutas disponibles
+## Funcionalidades
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/health` | Verifica el estado del servidor |
-| GET | `/api/events` | Obtiene el listado de eventos |
-| GET | `/api/sessions` | Consulta la ruta inicial de sesiones |
-| POST | `/api/sessions/register` | Registra un nuevo usuario |
+### Registro de usuarios
 
-## Registro de usuarios
+**POST** `/api/sessions/register`
 
-El registro se realiza mediante:
-
-`POST /api/sessions/register`
-
-Ejemplo del cuerpo de la solicitud (JSON):
+Permite registrar usuarios con los siguientes datos:
 
 ```json
 {
-    "first_name": "Ana",
-    "last_name": "Perez",
-    "email": "ana@mail.com",
-    "password": "Secreta123"
+  "first_name": "Usuario",
+  "last_name": "Prueba",
+  "email": "usuario@example.com",
+  "password": "Prueba123456"
 }
 ```
 
-### Validaciones implementadas
+Validaciones:
+- Campos obligatorios.
+- Formato de email.
+- Contraseña de al menos 8 caracteres.
+- No permite emails duplicados.
+- Encriptación de contraseñas mediante bcrypt.
+- El rol inicial se establece como `user`.
 
-- Todos los campos son obligatorios.
-- Se valida el formato del email.
-- Se normaliza el email a minúsculas.
-- No se permite registrar emails duplicados.
-- La contraseña debe tener al menos 8 caracteres.
-- Las contraseñas se encriptan utilizando bcrypt antes de almacenarse.
-- El rol se asigna automáticamente como `user`, evitando que el usuario pueda establecer privilegios desde el registro.
-- La respuesta no expone la contraseña.
+### Inicio de sesión
 
-### Respuestas del endpoint
+**POST** `/api/sessions/login`
 
-- `201 Created`: usuario registrado correctamente.
-- `400 Bad Request`: datos incompletos o inválidos.
-- `409 Conflict`: el email ya se encuentra registrado.
+Permite autenticar un usuario mediante email y contraseña.
 
-## Estado del proyecto
+```json
+{
+  "email": "usuario@example.com",
+  "password": "Prueba123456"
+}
+```
 
-Proyecto correspondiente a la segunda preentrega del curso Backend II.
+Al iniciar sesión correctamente, genera un token JWT y lo almacena en una cookie llamada `currentUser`.
 
-Se implementó el registro de usuarios con persistencia en MongoDB Atlas, utilizando Mongoose y una arquitectura organizada en DAO, Repository, Service, Controller y Router.
+La cookie utiliza:
+- `httpOnly: true`
+- `sameSite: lax`
+- `maxAge: 3600000`
+- `secure: true` en producción.
 
-También se incorporó el cifrado de contraseñas mediante bcrypt y validaciones para garantizar un registro seguro de usuarios.
+### Usuario actual
+
+**GET** `/api/sessions/current`
+
+Permite consultar los datos del usuario autenticado.
+
+Requiere una cookie JWT válida.
+
+Respuesta:
+
+```json
+{
+  "status": "success",
+  "payload": {
+    "id": "ID_DEL_USUARIO",
+    "email": "usuario@example.com",
+    "role": "user"
+  }
+}
+```
+
+### Cierre de sesión
+
+**POST** `/api/sessions/logout`
+
+Elimina la cookie `currentUser` y cierra la sesión.
+
+Respuesta:
+
+```json
+{
+  "status": "success",
+  "message": "Sesión cerrada correctamente"
+}
+```
+
+## Seguridad y autenticación
+
+- Las contraseñas se almacenan encriptadas utilizando bcrypt.
+- Los tokens se generan y verifican mediante jsonwebtoken.
+- La autenticación se realiza mediante cookies HTTP.
+- El middleware `auth.middleware.js` verifica la validez del token.
+- Las variables sensibles se almacenan en `.env`, archivo excluido del repositorio.
+
+## Pruebas realizadas
+
+Se verificaron los siguientes casos utilizando Postman:
+
+- Registro correcto de usuario.
+- Inicio de sesión exitoso.
+- Consulta del usuario autenticado.
+- Cierre de sesión.
+- Acceso rechazado después del logout.
+- Rechazo de contraseña incorrecta.
+- Rechazo de email inexistente.
+- Rechazo de token inválido.
+
+## Autor
+
+Proyecto desarrollado para el curso Backend II - Coderhouse.
